@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Public Branches (Read-only for public portal and branch selection)
+    match /branches/{branchId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Public Parent Registration Portal (Leads creation & status tracking)
+    match /leads/{leadId} {
+      // Allows prospective parents to register online without requiring prior login
+      allow create: if true;
+      // Allows parents to track their specific application status by code
+      allow get: if true;
+      // Management actions (listing all leads, updating pipeline, deleting) require authentication
+      allow list, update, delete: if isSignedIn();
+    }
+
+    match /lead_lookups/{lookupId} {
+      allow create, get: if true;
+      allow list, update, delete: if isSignedIn();
+    }
+
+    // All CRM modules, user accounts, students, contracts, debts, finance, attendance, and tasks
+    // strictly require authenticated user access.
+    match /{document=**} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

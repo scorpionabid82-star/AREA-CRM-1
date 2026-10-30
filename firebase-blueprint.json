@@ -1,0 +1,273 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access control and Gmail whitelist",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["direktor", "menecer", "telimci", "sagird"] },
+        "branchId": { "type": "string" },
+        "branchName": { "type": "string" },
+        "status": { "type": "string", "enum": ["aktiv", "bloklanib", "dondurulub"] },
+        "createdAt": { "type": "string" },
+        "lastLogin": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["fullName", "email", "role"]
+    },
+    "Branch": {
+      "title": "Branch",
+      "description": "Educational center branch location with geolocation coordinates",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "radiusMeters": { "type": "number" },
+        "phone": { "type": "string" },
+        "managerName": { "type": "string" },
+        "managerId": { "type": "string" },
+        "roomCount": { "type": "number" },
+        "monthlyRent": { "type": "number" },
+        "status": { "type": "string", "enum": ["aktiv", "temirde", "planlasdirilir"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "address", "phone", "status"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student record with course enrollment and payment balance",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "phone": { "type": "string" },
+        "parentPhone": { "type": "string" },
+        "branchId": { "type": "string" },
+        "branchName": { "type": "string" },
+        "status": { "type": "string", "enum": ["aktiv", "dondurub", "bitirib", "xaric"] },
+        "balance": { "type": "number" },
+        "monthlyFee": { "type": "number" },
+        "enrollmentDate": { "type": "string" }
+      },
+      "required": ["fullName", "phone", "status"]
+    },
+    "Group": {
+      "title": "Group",
+      "description": "Study group with trainer assignment, timetable and curriculum",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "courseName": { "type": "string" },
+        "trainerId": { "type": "string" },
+        "trainerName": { "type": "string" },
+        "branchId": { "type": "string" },
+        "branchName": { "type": "string" },
+        "schedule": { "type": "string" },
+        "room": { "type": "string" },
+        "status": { "type": "string", "enum": ["aktiv", "tamamlandi", "gozleyir"] },
+        "startDate": { "type": "string" }
+      },
+      "required": ["name", "courseName", "branchId"]
+    },
+    "Staff": {
+      "title": "Staff",
+      "description": "Employee and trainer profile with branch assignments and base salary",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string" },
+        "branchId": { "type": "string" },
+        "branchName": { "type": "string" },
+        "baseSalary": { "type": "number" },
+        "status": { "type": "string", "enum": ["aktiv", "mezuniyyet", "cixib"] }
+      },
+      "required": ["fullName", "email", "role"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Potential student inquiry received through social media or direct channels",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "phone": { "type": "string" },
+        "interestedCourse": { "type": "string" },
+        "branchId": { "type": "string" },
+        "source": { "type": "string" },
+        "stage": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["fullName", "phone", "stage"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Tuition payment transaction for a student",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "method": { "type": "string" },
+        "receiptNumber": { "type": "string" },
+        "branchId": { "type": "string" }
+      },
+      "required": ["studentId", "amount", "date", "receiptNumber"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Operating expense with receipt upload and leadership approval workflow",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "branchId": { "type": "string" },
+        "receiptUrl": { "type": "string" },
+        "receiptFile": { "type": "string" },
+        "approvalStatus": { "type": "string", "enum": ["tesdiqlendi", "gozleyir", "imtina"] },
+        "approvedBy": { "type": "string" },
+        "approvedAt": { "type": "string" }
+      },
+      "required": ["title", "amount", "category", "date", "approvalStatus"]
+    },
+    "ExtraIncome": {
+      "title": "ExtraIncome",
+      "description": "Additional revenue such as books, masterclasses or merchandise",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "branchId": { "type": "string" }
+      },
+      "required": ["title", "amount", "category", "date"]
+    },
+    "StudentAttendance": {
+      "title": "StudentAttendance",
+      "description": "Daily attendance record for students in groups",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "groupId": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string", "enum": ["i/e", "q/b", "icazeli"] }
+      },
+      "required": ["studentId", "groupId", "date", "status"]
+    },
+    "StaffAttendance": {
+      "title": "StaffAttendance",
+      "description": "Geofenced QR-based check-in and check-out logs for staff",
+      "type": "object",
+      "properties": {
+        "staffId": { "type": "string" },
+        "staffName": { "type": "string" },
+        "date": { "type": "string" },
+        "checkIn": { "type": "string" },
+        "checkOut": { "type": "string" },
+        "branchId": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["staffId", "date", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System or financial in-app notification item",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "category": { "type": "string" },
+        "priority": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "branchId": { "type": "string" }
+      },
+      "required": ["title", "message", "category", "isRead"]
+    },
+    "StudentDebt": {
+      "title": "StudentDebt",
+      "description": "Monthly tuition debt record per student and contract in Firestore",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "contractId": { "type": "string" },
+        "contractNumber": { "type": "string" },
+        "courseName": { "type": "string" },
+        "groupId": { "type": "string" },
+        "groupName": { "type": "string" },
+        "amount": { "type": "number" },
+        "month": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["odenilmayib", "qismen_odenilib", "tam_odenilib"] },
+        "paidAmount": { "type": "number" },
+        "remainingAmount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["studentId", "contractId", "amount", "month", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Authorized users with Gmail whitelist"
+    },
+    "/branches/{branchId}": {
+      "schema": "Branch",
+      "description": "Learning center branches"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Active and past students enrolled in courses"
+    },
+    "/groups/{groupId}": {
+      "schema": "Group",
+      "description": "Class groups, timetables, and teacher assignments"
+    },
+    "/staff/{staffId}": {
+      "schema": "Staff",
+      "description": "Staff and instructors"
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Prospective inquiries in the sales pipeline"
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Tuition and service payments"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Operational expenses requiring receipt validation"
+    },
+    "/extraIncomes/{incomeId}": {
+      "schema": "ExtraIncome",
+      "description": "Auxiliary income records"
+    },
+    "/studentAttendance/{attendanceId}": {
+      "schema": "StudentAttendance",
+      "description": "Lesson-by-lesson student attendance"
+    },
+    "/staffAttendance/{logId}": {
+      "schema": "StaffAttendance",
+      "description": "QR terminal geolocation staff attendance"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "In-app notification messages"
+    },
+    "/student_debts/{debtId}": {
+      "schema": "StudentDebt",
+      "description": "Individual monthly debt records per student/contract"
+    }
+  }
+}

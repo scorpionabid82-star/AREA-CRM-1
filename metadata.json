@@ -1,0 +1,6 @@
+{
+  "name": "AREA-CRM - Tədris Mərkəzi İdarəetmə Sistemi",
+  "description": "AREA-CRM tədris mərkəzinin bütün proseslərini: tələbə və qrup idarəetməsi, müraciətlər, maliyyə, QR kod və geolokasiyalı heyət davamiyyəti, kurikulumlar və avtomatlaşdırılmış sertifikat generatorunu birləşdirən kompleks idarəetmə sistemi.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
