@@ -157,6 +157,7 @@ export const DIRECTOR_EMAILS: string[] = [
   'roboticsarea@gmail.com',
   'mentor.rasulzada@gmail.com',
   'texnobabasatis@gmail.com',
+  'hasanovfariz@gmail.com',
 ];
 
 export const isDirectorEmail = (email?: string | null): boolean => {
@@ -221,6 +222,20 @@ export const REAL_AUTHORIZED_USERS: UserAccount[] = [
     createdAt: '2026-04-01',
     lastLogin: 'Qeydiyyatdan keçib',
     notes: 'Direktor və Satış Rəhbəri.',
+  },
+  {
+    id: 'usr-dir-hasanovfariz',
+    fullName: 'Fariz Həsənov',
+    email: 'hasanovfariz@gmail.com',
+    phone: '',
+    role: 'direktor',
+    branchId: 'all',
+    branchName: 'Bütün Filiallar (Qlobal Şəbəkə)',
+    isSuperAdmin: true,
+    status: 'aktiv',
+    createdAt: '2026-04-01',
+    lastLogin: 'Qeydiyyatdan keçib',
+    notes: 'Direktor və Sistem İnzibatçısı.',
   },
 ];
 
@@ -354,6 +369,7 @@ interface CrmContextType {
   restoreContract: (id: string) => void;
   getStudentContracts: (studentId: string) => StudentContract[];
   studentDebts: StudentDebtRecord[];
+  allStudentDebts?: StudentDebtRecord[];
 
   // Groups
   groups: Group[];
@@ -1742,6 +1758,8 @@ export const CrmProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ? 'Mentor Rəsulzadə'
               : email === 'texnobabasatis@gmail.com'
               ? 'Texnobaba Satış Direktoru'
+              : email === 'hasanovfariz@gmail.com'
+              ? 'Fariz Həsənov'
               : 'scorpionabid82';
 
           const dir: UserAccount = {
@@ -1880,6 +1898,8 @@ export const CrmProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ? 'Mentor Rəsulzadə'
             : email === 'texnobabasatis@gmail.com'
             ? 'Texnobaba Satış Direktoru'
+            : email === 'hasanovfariz@gmail.com'
+            ? 'Fariz Həsənov'
             : 'scorpionabid82';
 
         const dir: UserAccount = {
@@ -4727,6 +4747,10 @@ export const CrmProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ? contracts.filter(c => c.branchId === effectiveBranchId || allowedStudentIds.has(c.studentId))
     : contracts;
 
+  const exposedStudentDebts = effectiveBranchId
+    ? studentDebts.filter(d => d.branchId === effectiveBranchId || allowedStudentIds.has(d.studentId))
+    : studentDebts;
+
   const exposedUsers = effectiveBranchId
     ? users.filter(userBelongsToActiveBranch)
     : users;
@@ -6572,7 +6596,8 @@ export const CrmProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         hardDeleteContract,
         restoreContract,
         getStudentContracts,
-        studentDebts,
+        studentDebts: exposedStudentDebts,
+        allStudentDebts: studentDebts,
         groups: exposedGroups,
         addGroup,
         updateGroup,

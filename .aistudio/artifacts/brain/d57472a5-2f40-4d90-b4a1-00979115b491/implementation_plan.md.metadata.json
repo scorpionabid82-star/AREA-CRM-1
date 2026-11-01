@@ -1,6 +1,6 @@
 {
-  "summary":  "AREA-CRM təhlükəsizlik və baza mühafizəsi planı: Cloud Firestore təhlükəsizlik qaydalarının sərtləşdirilməsi (request.auth != null), ictimai müraciət portalının ('leads') qorunması, 8 ədəd köhnə şablon hesabın bazadan silinməsi, Nahid Şeydayev hesabının toxunulmaz saxlanılması və kod daxili test bypass-larının ləğvi.",
-  "updatedAt":  "2026-10-30T17:04:12.237362008Z",
+  "summary":  "Maliyyə modulunda ödəniş məbləği daxiletmə məhdudiyyətinin (56/61 AZN addım xətasının) aradan qaldırılması və filial üzrə yığılacaq borcların həm xülasə kartı, həm də ətraflı 'Borclar' alt bölməsi ilə təmin edilməsi planı.",
+  "updatedAt":  "2026-11-01T14:42:42.328320515Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

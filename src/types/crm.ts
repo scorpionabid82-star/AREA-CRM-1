@@ -208,6 +208,8 @@ export interface StudentDebtRecord {
   remainingAmount: number;
   createdAt: string;
   notes?: string;
+  branchId?: string;
+  branchName?: string;
 }
 
 export interface TrainerSalary {

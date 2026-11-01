@@ -34,13 +34,16 @@ import {
   Copy,
   ExternalLink,
   CheckCheck,
+  AlertCircle,
+  Search,
+  UserCheck,
 } from 'lucide-react';
 import { useCrm } from '../../context/CrmContext';
 import { PaymentTransaction, Expense, ExtraIncome, TrainerSalary } from '../../types/crm';
 import { formatAZN, formatDateAz, exportToCSV } from '../../utils/formatters';
 
 interface FinanceViewProps {
-  initialSubTab?: 'payments' | 'salaries' | 'expenses' | 'extra' | 'matrix';
+  initialSubTab?: 'payments' | 'debts' | 'salaries' | 'expenses' | 'extra' | 'matrix';
 }
 
 export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payments' }) => {
@@ -53,6 +56,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payme
     expenses,
     extraIncomes,
     trainerSalaries,
+    studentDebts,
     recordPayment,
     deletePayment,
     addExpense,
@@ -75,7 +79,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payme
 
   const isDirector = currentUser?.role === 'direktor' || currentUser?.isSuperAdmin;
 
-  const [activeSubTab, setActiveSubTab] = useState<'payments' | 'salaries' | 'expenses' | 'extra' | 'matrix'>(initialSubTab);
+  const [activeSubTab, setActiveSubTab] = useState<'payments' | 'debts' | 'salaries' | 'expenses' | 'extra' | 'matrix'>(initialSubTab);
+
+  // Debts search & filters
+  const [debtSearch, setDebtSearch] = useState('');
+  const [debtGroupFilter, setDebtGroupFilter] = useState('all');
 
   // Modal states
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -139,6 +147,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payme
   const totalTrainerSalaries = trainerSalaries.reduce((acc, s) => acc + s.totalPaid, 0);
   const totalOutflow = totalExpenses + totalTrainerSalaries;
   const netProfit = totalGrossIncome - totalOutflow;
+
+  // Debtor students & Receivables (Filial üzrə yığılacaq borclar)
+  const debtorStudents = students.filter(s => (s.balance || 0) < 0 && s.status === 'aktiv');
+  const totalDebtorAmount = debtorStudents.reduce((acc, s) => acc + Math.abs(s.balance || 0), 0);
+  const unpaidDebtsCount = debtorStudents.length;
 
   const cleanPhoneForWa = (phone?: string) => {
     if (!phone) return '';
@@ -308,6 +321,56 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payme
             </button>
           )}
 
+          {activeSubTab === 'debts' && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const debtExport = debtorStudents.map(s => {
+                    const c = contracts.find(ct => ct.studentId === s.id && ct.status === 'aktiv');
+                    const g = groups.find(grp => grp.id === s.groupId);
+                    return {
+                      Telebe: s.fullName,
+                      FIN: s.finCode || '-',
+                      Telefon: s.phone || '-',
+                      ValideynTel: s.parentPhone || '-',
+                      Filial: s.branchName || '-',
+                      Qrup: g?.name || '-',
+                      Kurs: s.courseName || c?.courseName || '-',
+                      AyliqHaqqAZN: c?.monthlyFee || s.monthlyFee || 0,
+                      YigilacaqBorcAZN: Math.abs(s.balance || 0),
+                    };
+                  });
+                  exportToCSV(`AREA_Borclular_Siyahisi_${new Date().toISOString().split('T')[0]}`, debtExport);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-rose-600" />
+                <span>Borclular Siyahısını Yüklə</span>
+              </button>
+
+              {can('create', 'finance') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const firstDebtor = debtorStudents[0] || students[0];
+                    if (firstDebtor) {
+                      handleStudentSelectChange(firstDebtor.id);
+                      if ((firstDebtor.balance || 0) < 0) {
+                        setPayAmount(Math.abs(firstDebtor.balance));
+                      }
+                    }
+                    setShowPaymentModal(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Ödəniş Qəbul Et</span>
+                </button>
+              )}
+            </div>
+          )}
+
           {activeSubTab === 'expenses' && can('create', 'finance') && (
             <button
               onClick={() => setShowExpenseModal(true)}
@@ -406,7 +469,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payme
       </div>
 
       {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         <div className="p-4 bg-white rounded-xl border border-slate-200">
           <div className="flex items-center justify-between text-slate-500 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wider">Mədaxil</span>
@@ -458,6 +521,28 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payme
             Xalis gəlir
           </span>
         </div>
+
+        <div
+          onClick={() => setActiveSubTab('debts')}
+          className={`p-4 rounded-xl border transition-all cursor-pointer group ${
+            activeSubTab === 'debts'
+              ? 'bg-amber-100/70 border-amber-400 ring-2 ring-amber-400/30'
+              : 'bg-amber-50/40 hover:bg-amber-50/80 border-amber-200'
+          }`}
+          title="Filial üzrə borclu tələbələrin siyahısına baxmaq üçün klikləyin"
+        >
+          <div className="flex items-center justify-between text-amber-700 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Yığılacaq Borclar</span>
+            <AlertCircle className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform" />
+          </div>
+          <div className="text-xl font-bold font-mono-nums text-amber-700 mt-1">
+            {formatAZN(totalDebtorAmount)}
+          </div>
+          <span className="text-[11px] text-amber-800 font-semibold mt-1 flex items-center justify-between">
+            <span>{unpaidDebtsCount} tələbədə borc qalıb</span>
+            <span className="text-[10px] text-indigo-600 font-medium group-hover:underline">Bax ➔</span>
+          </span>
+        </div>
       </div>
 
       {/* Sub-Tabs Navigation */}
@@ -472,6 +557,17 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payme
         >
           <CreditCard className="w-3.5 h-3.5" />
           <span>Ödənişlər ({payments.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab('debts')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap cursor-pointer ${
+            activeSubTab === 'debts'
+              ? 'bg-white text-amber-700 shadow-sm font-semibold ring-1 ring-amber-200'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+          <span>Borclar ({unpaidDebtsCount})</span>
         </button>
         <button
           onClick={() => setActiveSubTab('salaries')}
@@ -614,7 +710,258 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payme
         </div>
       )}
 
-      {/* 2. Trainer Salaries Table */}
+      {/* 2. Outstanding Student Debts (Filial üzrə Yığılacaq Borclar) */}
+      {activeSubTab === 'debts' && (() => {
+        const filteredDebtors = debtorStudents.filter(s => {
+          const matchQuery =
+            !debtSearch.trim() ||
+            s.fullName.toLowerCase().includes(debtSearch.toLowerCase()) ||
+            (s.finCode && s.finCode.toLowerCase().includes(debtSearch.toLowerCase())) ||
+            (s.phone && s.phone.includes(debtSearch)) ||
+            (s.parentPhone && s.parentPhone.includes(debtSearch)) ||
+            (s.courseName && s.courseName.toLowerCase().includes(debtSearch.toLowerCase()));
+
+          const matchGroup = debtGroupFilter === 'all' || s.groupId === debtGroupFilter;
+          return matchQuery && matchGroup;
+        });
+
+        const filteredDebtorTotal = filteredDebtors.reduce((acc, s) => acc + Math.abs(s.balance || 0), 0);
+
+        return (
+          <div className="space-y-4">
+            {/* Filter and Search Bar */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={debtSearch}
+                    onChange={e => setDebtSearch(e.target.value)}
+                    placeholder="Tələbə adı, FİN kodu, telefon və ya kurs axtar..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-900"
+                  />
+                  {debtSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setDebtSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="w-full sm:w-56">
+                  <select
+                    value={debtGroupFilter}
+                    onChange={e => setDebtGroupFilter(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 font-medium"
+                  >
+                    <option value="all">Bütün Qruplar ({groups.length})</option>
+                    {groups.map(g => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.courseName || 'Kurs'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Debt Summary Pill Indicators */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-200 rounded-lg text-xs font-semibold text-rose-700">
+                  <span>Yığılacaq:</span>
+                  <span className="font-mono-nums font-bold text-rose-800">{formatAZN(filteredDebtorTotal)}</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-700">
+                  <span>Borclu Sayı:</span>
+                  <span className="font-mono-nums font-bold text-amber-800">{filteredDebtors.length}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Debts Table */}
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+              <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600" />
+                    <span>Filial üzrə Tələbə Borcları və Yığılacaq Ödənişlər</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Tələbələrin mənfi balansları və ödənilməmiş təhsil haqqı qalıqları
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const debtExport = filteredDebtors.map(s => {
+                      const c = contracts.find(ct => ct.studentId === s.id && ct.status === 'aktiv');
+                      const g = groups.find(grp => grp.id === s.groupId);
+                      return {
+                        Telebe: s.fullName,
+                        FIN: s.finCode || '-',
+                        Telefon: s.phone || '-',
+                        ValideynTel: s.parentPhone || '-',
+                        Filial: s.branchName || '-',
+                        Qrup: g?.name || '-',
+                        Kurs: s.courseName || c?.courseName || '-',
+                        AyliqHaqqAZN: c?.monthlyFee || s.monthlyFee || 0,
+                        YigilacaqBorcAZN: Math.abs(s.balance || 0),
+                      };
+                    });
+                    exportToCSV(`AREA_Borclar_${new Date().toISOString().split('T')[0]}`, debtExport);
+                  }}
+                  className="text-xs text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" /> CSV İxrac
+                </button>
+              </div>
+
+              {filteredDebtors.length === 0 ? (
+                <div className="p-12 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mx-auto">
+                    <CheckCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">
+                      Heç Bir Ödənilməmiş Borc Yoxdur!
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      Seçilmiş filial və filtr parametrləri üzrə bütün tələbələrin ödəniş balansı tam qaydasındadır.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4">Tələbə</th>
+                        <th className="py-3 px-4">Filial</th>
+                        <th className="py-3 px-4">Qrup və Kurs</th>
+                        <th className="py-3 px-4">Standart Aylıq</th>
+                        <th className="py-3 px-4">Yığılacaq Borc</th>
+                        <th className="py-3 px-4">Valideyn Əlaqə</th>
+                        <th className="py-3 px-4 text-right">Əməliyyatlar</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredDebtors.map(student => {
+                        const activeContract = contracts.find(c => c.studentId === student.id && c.status === 'aktiv');
+                        const group = groups.find(g => g.id === (activeContract?.groupId || student.groupId));
+                        const debtAmount = Math.abs(student.balance || 0);
+                        const phone = student.parentPhone || student.phone || '';
+                        const cleanPhone = cleanPhoneForWa(phone);
+
+                        return (
+                          <tr key={student.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                                <span>{student.fullName}</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {student.finCode && (
+                                  <span className="font-mono text-[10px] text-slate-400">
+                                    FİN: {student.finCode}
+                                  </span>
+                                )}
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title="Aktiv tələbə" />
+                              </div>
+                            </td>
+
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                                {student.branchName || 'Ümumi Şəbəkə'}
+                              </span>
+                            </td>
+
+                            <td className="py-3 px-4">
+                              <div className="font-medium text-slate-900">
+                                {group?.name || 'Təyin edilməyib'}
+                              </div>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">
+                                {activeContract?.courseName || student.courseName || group?.courseName || 'Ümumi Tədris'}
+                              </span>
+                            </td>
+
+                            <td className="py-3 px-4 font-mono-nums text-slate-700">
+                              {formatAZN(activeContract?.monthlyFee || student.monthlyFee || 0)}
+                            </td>
+
+                            <td className="py-3 px-4">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold font-mono-nums text-rose-700 bg-rose-50 border border-rose-200 text-xs">
+                                <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                                {debtAmount} AZN
+                              </span>
+                            </td>
+
+                            <td className="py-3 px-4">
+                              {phone ? (
+                                <a
+                                  href={`tel:${phone}`}
+                                  className="text-slate-700 hover:text-indigo-600 font-mono text-[11px] transition-colors"
+                                >
+                                  {phone}
+                                </a>
+                              ) : (
+                                <span className="text-slate-400 text-[11px]">-</span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {cleanPhone && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const text = `Hörmətli valideyn, AREA Academy tərəfindən bildirilir ki, ${student.fullName} üzrə cari tədris haqqından ${debtAmount} AZN ödəniş borcu qeydə alınıb. Zəhmət olmasa yaxın günlərdə filialımıza və ya bank kartı/MilliÖn vasitəsilə ödənişi təmin etməyiniz xahiş olunur. Təşəkkür edirik!`;
+                                      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
+                                    }}
+                                    className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                                    title="Valideynə WhatsApp ilə borc xatırlatması göndər"
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline text-[11px]">WhatsApp</span>
+                                  </button>
+                                )}
+
+                                {can('create', 'finance') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleStudentSelectChange(student.id);
+                                      if (activeContract) {
+                                        setPayContractId(activeContract.id);
+                                      }
+                                      setPayAmount(debtAmount);
+                                      setShowPaymentModal(true);
+                                      showToast(`${student.fullName} üçün ${debtAmount} AZN ödəniş forması açıldı`);
+                                    }}
+                                    className="py-1.5 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1 transition-colors cursor-pointer"
+                                    title="Bu tələbə üçün dərhal ödəniş qəbul et"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span className="text-[11px]">Ödəniş Qəbul Et</span>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 3. Trainer Salaries Table */}
       {activeSubTab === 'salaries' && (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
           <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1615,7 +1962,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payme
                       type="number"
                       min="0"
                       max={baseMonthlyFee}
-                      step="5"
+                      step="any"
                       value={payDiscount || ''}
                       placeholder="0 AZN"
                       onChange={e => handleDiscountChange(Number(e.target.value))}
@@ -1632,8 +1979,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({ initialSubTab = 'payme
                     </label>
                     <input
                       type="number"
-                      min="1"
-                      step="5"
+                      min="0.01"
+                      step="any"
                       required
                       value={payAmount}
                       onChange={e => setPayAmount(Number(e.target.value))}
